@@ -24,9 +24,29 @@ class ProcessMailgunWebhookJob extends ProcessWebhookJob
             return;
         };
 
-        $mailgunEvent = MailgunEventFactory::createForPayload($payload);
+        $event = Arr::get($payload, 'event-data.event');
 
-        $mailgunEvent->handle($send);
+        if ($event === 'opened') {
+            $send->registerOpen();
+
+            return;
+        }
+
+        if ($event === 'clicked') {
+            $url = Arr::get($payload, 'event-data.url');
+
+            $send->registerClick($url);
+
+            return;
+        }
+
+        if ($event === 'failed') {
+            if (Arr::get($this->payload, 'event-data.severity') !== 'permanent') {
+                $send->registerBounce();
+
+                return;
+            }
+        }
     }
 
     protected function getSend(): ?Send
